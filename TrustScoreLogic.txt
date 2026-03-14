@@ -1,0 +1,72 @@
+CredSetu - Trust Score & Group Health Logic
+
+This document breaks down the exact points system and logic behind the Trust Scores and Group Health Scores in the CredSetu platform.
+
+================================================================================
+1. INDIVIDUAL MEMBER TRUST SCORE
+================================================================================
+The Member Trust Score evaluates an individual's financial reliability.
+
+Scale: 
+- Minimum Score: 0
+- Maximum Score: 900
+- Starting (Base) Score: 100
+
+How Points are Added:
+- Verified Saving Deposits: +2 points per deposit
+- On-time Loan Repayment: +5 points per repayment
+- Successfully Completed Loan: +20 points (awarded when loan status is 'completed')
+- Meeting Attendance: +1 point per meeting attended
+
+How Points are Deducted (Penalties):
+- Late Loan Repayment: -10 points per late repayment
+- Defaulted Loan: -20 points (applied when loan status is 'defaulted')
+- Missed Meetings (Consecutive): -5 points (applied when a member misses 3 meetings in a row)
+
+Updates: The score recalculates immediately whenever a new transaction, attendance record, or loan status change happens.
+
+
+================================================================================
+2. GROUP TRUST SCORE (GROUP HEALTH SCORE)
+================================================================================
+The Group Health Score measures the collective financial stability of an entire Self Help Group (SHG).
+
+Scale:
+- Minimum Score: 0%
+- Maximum Score: 100%
+
+The score uses 4 weighted formulas to calculate a total percentage:
+
+Component A: Average Member Trust Score (Weight: 40%)
+- Logic: Takes the individual trust scores of all members, averages them, and converts it to a 100-point scale.
+- Formula: (Group Average Trust Score / 9) * 0.40
+
+Component B: On-Time Loan Repayment Rate (Weight: 30%)
+- Logic: Calculates the percentage of on-time loan repayments compared to all repayments made by the group.
+- Formula: [ (Total Repayments - Late Repayments) / Total Repayments ] * 100 * 0.30
+
+Component C: Fund Growth Goal (Weight: 20%)
+- Logic: Rewards groups that maintain a healthy active fund balance. The current target is ₹10,000. Reaching this target grants the full 20%.
+- Formula: [ Total SHG Fund / 10,000 ] * 100 * 0.20 (Maxes out at 20%)
+
+Component D: Pending Loan Penalty (Weight: -10% Deduction)
+- Logic: Acts as a penalty for having too many loans stuck in a "Pending" status relative to total loans.
+- Formula: [ Total Pending Loans / Total Loans ] * 100 * 0.10
+
+Final Group Score = (Component A) + (Component B) + (Component C) - (Component D)
+
+The final score is mathematically rounded and strictly clamped between 0 and 100. It refreshes automatically anytime an individual member's data in the group changes.
+
+
+================================================================================
+3. RISK ENGINE & AUTOMATED ALERTS
+================================================================================
+A background system automatically fires alerts based on score thresholds to notify admins and banks:
+
+High Severity (Red Alerts):
+- Group Critical Status: Group Health Score drops below 50.
+- Member Critical Status: A Member's Trust Score drops below 60.
+
+Medium Severity (Yellow Alerts):
+- Repayment Risk: A member accumulates 2 or more late repayments.
+- Engagement Risk: A member misses 3 consecutive meetings.
