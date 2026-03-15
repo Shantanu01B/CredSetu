@@ -121,7 +121,7 @@ const Header = ({ toggleSidebar }) => {
                                 )}
                             </div>
                             <Link
-                                to="/alerts"
+                                to="/notifications"
                                 className="block p-3 text-center text-sm text-blue-600 hover:underline border-t"
                                 onClick={() => setShowDropdown(false)}
                             >

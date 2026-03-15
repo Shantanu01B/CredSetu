@@ -3,6 +3,7 @@ const Loan = require('../models/Loan');
 const SHG = require('../models/SHG');
 const calculateTrustScore = require('../utils/trustScore');
 const createNotification = require('../utils/createNotification');
+const notifySHGStaff = require('../utils/notifySHGStaff');
 
 const Transaction = require('../models/Transaction');
 
@@ -36,6 +37,13 @@ const requestLoan = asyncHandler(async (req, res) => {
         'Loan Request Submitted',
         `Your loan request for ₹${amount} has been submitted and is pending approval.`,
         'info'
+    );
+
+    await notifySHGStaff(
+        req.user.shg,
+        'Action Required: New Loan Request',
+        `${req.user.name} has requested a loan of ₹${amount} pending approval.`,
+        'warning'
     );
 
     res.status(201).json(loan);
@@ -97,6 +105,16 @@ const updateLoanStatus = asyncHandler(async (req, res) => {
         : `Your loan request for ₹${loan.amount} has been rejected.`;
 
     await createNotification(loan.user, 'Loan Status Update', notificationMessage, notificationType);
+
+    const User = require('../models/User');
+    const member = await User.findById(loan.user);
+
+    await notifySHGStaff(
+        loan.shg,
+        'Loan Status Updated',
+        `A loan request of ₹${loan.amount} by ${member ? member.name : 'a member'} was ${status} by ${req.user.name}.`,
+        'info'
+    );
 
     const reason = `Loan Status Updated: ${status}`;
     await calculateTrustScore(loan.user, reason);

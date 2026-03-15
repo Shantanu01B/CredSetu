@@ -16,6 +16,7 @@ import FinancialHistory from './pages/FinancialHistory';
 import AdminFinanceOverview from './pages/AdminFinanceOverview';
 import AdminTransactionTable from './pages/AdminTransactionTable';
 import MyLoans from './pages/MyLoans';
+import Notifications from './pages/Notifications';
 import { Toaster } from 'react-hot-toast';
 import { useAuth } from './context/AuthContext';
 
@@ -41,6 +42,11 @@ function App() {
 
         {/* Protected Routes */}
         <Route element={<DashboardLayout />}>
+
+          {/* Common Routes */}
+          <Route element={<ProtectedRoute allowedRoles={['member', 'admin', 'bank_viewer']} />}>
+            <Route path="/notifications" element={<Notifications />} />
+          </Route>
 
           {/* Admin Routes */}
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>

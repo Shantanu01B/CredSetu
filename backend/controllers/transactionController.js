@@ -3,6 +3,7 @@ const Transaction = require('../models/Transaction');
 const SHG = require('../models/SHG');
 const calculateTrustScore = require('../utils/trustScore');
 const createNotification = require('../utils/createNotification');
+const notifySHGStaff = require('../utils/notifySHGStaff');
 
 // @desc    Create a transaction (Saving/Repayment)
 // @route   POST /api/transactions
@@ -41,6 +42,13 @@ const createTransaction = asyncHandler(async (req, res) => {
         'Transaction Submitted',
         `Your ${type} transaction of ₹${amount} is pending verification.`,
         'info'
+    );
+
+    await notifySHGStaff(
+        req.user.shg,
+        'Action Required: New Transaction',
+        `${req.user.name} has submitted a ${type} transaction of ₹${amount} pending verification.`,
+        'warning'
     );
 
     res.status(201).json(transaction);
@@ -116,6 +124,16 @@ const verifyTransaction = asyncHandler(async (req, res) => {
             'Transaction Verified',
             `Your ${transaction.type} transaction of ₹${transaction.amount} has been verified!`,
             'success'
+        );
+
+        const User = require('../models/User');
+        const member = await User.findById(transaction.user);
+
+        await notifySHGStaff(
+            transaction.shg,
+            'Transaction Verified',
+            `${member ? member.name + "'s " : ''}${transaction.type} transaction of ₹${transaction.amount} was verified by ${req.user.name}.`,
+            'info'
         );
 
         // Update Trust Score
