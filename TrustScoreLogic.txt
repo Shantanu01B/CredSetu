@@ -1,72 +1,133 @@
-CredSetu - Trust Score & Group Health Logic
+# CredSetu Trust Score & SHG Score Logic Detail
 
-This document breaks down the exact points system and logic behind the Trust Scores and Group Health Scores in the CredSetu platform.
+This document outlines the exact logic used to calculate the Member Trust Score, the Self Help Group (SHG) Health Score, and the conditions under which different statuses and risk alerts are triggered and displayed on the dashboard.
 
-================================================================================
-1. INDIVIDUAL MEMBER TRUST SCORE
-================================================================================
-The Member Trust Score evaluates an individual's financial reliability.
+---
 
-Scale: 
-- Minimum Score: 0
-- Maximum Score: 900
-- Starting (Base) Score: 100
+## 1. Member Trust Score
 
-How Points are Added:
-- Verified Saving Deposits: +2 points per deposit
-- On-time Loan Repayment: +5 points per repayment
-- Successfully Completed Loan: +20 points (awarded when loan status is 'completed')
-- Meeting Attendance: +1 point per meeting attended
+The Member Trust Score determines the reliability of an individual member based on their financial and community actions.
 
-How Points are Deducted (Penalties):
-- Late Loan Repayment: -10 points per late repayment
-- Defaulted Loan: -20 points (applied when loan status is 'defaulted')
-- Missed Meetings (Consecutive): -5 points (applied when a member misses 3 meetings in a row)
+- **Base Score:** Every user starts with 100 points.
+- **Score Limits (Clamping):** The score cannot go below 0 or above 900.
 
-Updates: The score recalculates immediately whenever a new transaction, attendance record, or loan status change happens.
+### Formula
+```text
+Trust Score = Base Score (100) 
+              + (Total Saving Transactions * 2) 
+              + (On-Time Repayments * 5) 
+              - (Late Repayments * 10) 
+              + (Completed Loans * 20) 
+              - (Defaulted Loans * 20) 
+              + (Meetings Attended * 1) 
+              - (Consecutive Misses Penalty: 5 points for every block of 3 misses)
 
+Final Trust Score = MAX(0, MIN(900, Trust Score))
+```
 
-================================================================================
-2. GROUP TRUST SCORE (GROUP HEALTH SCORE)
-================================================================================
-The Group Health Score measures the collective financial stability of an entire Self Help Group (SHG).
+### How Does the Score Increase or Decrease?
 
-Scale:
-- Minimum Score: 0%
-- Maximum Score: 100%
+The score is automatically recalculated based on three main activities:
 
-The score uses 4 weighted formulas to calculate a total percentage:
+**A. Transactions (Savings & Repayments)**
+- **Saving Deposit:** Every verified saving transaction adds **+2 points**.
+- **On-Time Repayment:** Every verified on-time loan repayment adds **+5 points**.
+- **Late Repayment:** Every late loan repayment deducts **-10 points**.
 
-Component A: Average Member Trust Score (Weight: 40%)
-- Logic: Takes the individual trust scores of all members, averages them, and converts it to a 100-point scale.
-- Formula: (Group Average Trust Score / 9) * 0.40
+**B. Loans**
+- **Completed Loan:** Successfully fully repaying a loan adds **+20 points**.
+- **Defaulted Loan:** Defaulting on a loan deducts **-20 points**.
 
-Component B: On-Time Loan Repayment Rate (Weight: 30%)
-- Logic: Calculates the percentage of on-time loan repayments compared to all repayments made by the group.
-- Formula: [ (Total Repayments - Late Repayments) / Total Repayments ] * 100 * 0.30
+**C. Attendance (Community Engagement)**
+- **Present:** Attending a meeting adds **+1 point**.
+- **Consecutive Absences:** Missing **3 consecutive meetings** deducts **-5 points**. (This penalty applies every time a member misses 3 in a row).
 
-Component C: Fund Growth Goal (Weight: 20%)
-- Logic: Rewards groups that maintain a healthy active fund balance. The current target is ₹10,000. Reaching this target grants the full 20%.
-- Formula: [ Total SHG Fund / 10,000 ] * 100 * 0.20 (Maxes out at 20%)
+### Member Trust Score Display Statuses (Front-end Logic)
 
-Component D: Pending Loan Penalty (Weight: -10% Deduction)
-- Logic: Acts as a penalty for having too many loans stuck in a "Pending" status relative to total loans.
-- Formula: [ Total Pending Loans / Total Loans ] * 100 * 0.10
+When displayed in tables or lists (e.g., Admin or Bank Dashboards), the Trust Score maps to the following visual badges:
+- **Creditworthy / Excellent (Green Status):** Trust Score is **700 or above**.
+- **Moderate (Yellow Status):** Trust Score is **between 500 and 699**.
+- **High Risk (Red Status):** Trust Score is **below 500**.
 
-Final Group Score = (Component A) + (Component B) + (Component C) - (Component D)
+> *Note: On the individual Member Dashboard, the badge displays default "Excellent" for aesthetic viewing, but the raw score is displayed dynamically in the range of 0 to 900.*
 
-The final score is mathematically rounded and strictly clamped between 0 and 100. It refreshes automatically anytime an individual member's data in the group changes.
+---
 
+## 2. Self Help Group (SHG) Health Score
 
-================================================================================
-3. RISK ENGINE & AUTOMATED ALERTS
-================================================================================
-A background system automatically fires alerts based on score thresholds to notify admins and banks:
+The SHG Health Score measures the overall financial and operational stability of a group as a whole.
 
-High Severity (Red Alerts):
-- Group Critical Status: Group Health Score drops below 50.
-- Member Critical Status: A Member's Trust Score drops below 60.
+- **Range:** The score ranges from 0 to 100.
 
-Medium Severity (Yellow Alerts):
-- Repayment Risk: A member accumulates 2 or more late repayments.
-- Engagement Risk: A member misses 3 consecutive meetings.
+### Formula
+```text
+SHG Health Score = Score A + Score B + Score C - Penalty D
+
+Where:
+Score A (Avg Trust Score Weight) = MIN((Average Member Trust Score / 9), 100) * 0.40
+Score B (Repayment Ratio Weight) = ((Total Repayments - Late Repayments) / Total Repayments * 100) * 0.30
+Score C (Fund Growth Weight)     = MIN((Group Total Fund / 10000), 1) * 100 * 0.20
+Penalty D (Pending Loan Ratio)   = (Pending Loans / Total Loans * 100) * 0.10
+
+Final SHG Score = ROUND(MAX(0, MIN(100, SHG Health Score)))
+```
+
+### How is the SHG Score Calculated?
+
+It consists of 4 weighted components (A, B, C, D) which are calculated and added together (or subtracted!).
+
+**A. Average Member Trust Score (Weight: 40%)**
+- The system takes the average Trust Score of all members in the group.
+- It is scaled down from 900 to 100, and then multiplied by 0.40.
+- *Example: If average trust score is 900, this component gives 40 points.*
+
+**B. Loan Repayment Ratio (Weight: 30%)**
+- The ratio of on-time loan repayments to total expected repayments for the group. 
+- *Example: 100% on-time repayment history gives the full 30 points.*
+
+**C. Fund Growth Rate (Weight: 20%)**
+- Evaluated against a target fund goal (Target: ₹10,000).
+- If the group has ₹10,000 or more in total funds, they get the full 20 points. If they have ₹5,000, they get 10 points.
+
+**D. Pending Loan Ratio Penalty (Weight: 10% Penalty)**
+- The percentage of active loans that are still stuck in the "pending" state.
+- *Example: If 50% of the loan pool is unapproved/pending, 5 points are deducted from the total.*
+
+### SHG Health Score Display Statuses
+
+Different dashboards categorize the 0-100 SHG score slightly differently to give Bank Managers or Admins the right perspective:
+
+**Bank Manager Dashboard View:**
+- **Good (Green Badge):** Score is **70 or above**.
+- **Moderate (Yellow Badge):** Score is **between 50 and 69**.
+- **Risk / Poor (Red Badge):** Score is **below 50**.
+
+**Admin Control Panel View:**
+- **Excellent (Green Badge):** Score is **80 or above**.
+- **Good (Blue Badge):** Score is **between 60 and 79**.
+- **Moderate (Yellow Badge):** Score is **between 40 and 59**.
+- **Risky (Red Badge):** Score is **below 40**.
+
+---
+
+## 3. Automated Risk Engine & Alerts
+
+The background Risk Engine continuously monitors the SHG and triggers alerts that are displayed on the Bank Dashboard's "Risk Watchlist".
+
+These are the exact conditions that will trigger a risk alert:
+
+- **Group Level Risk (High Severity / Red):** 
+  Triggered if the **SHG Health Score drops below 50**.
+  *Message: "Group Health Score is critical (Score)"*
+
+- **Member Level - Trust Score Risk (High Severity / Red):**
+  Triggered if any **Member's Trust Score drops below 60**. 
+  *Message: "Member Name: Trust Score is critically low (Score)"*
+
+- **Member Level - Repayment Risk (Medium Severity / Orange or Yellow):**
+  Triggered if any single member accumulates **2 or more late transactions**.
+  *Message: "Member Name: Has X late repayments"*
+
+- **Member Level - Engagement Risk (Low/Medium Severity / Yellow):**
+  Triggered if any member **misses the last 3 consecutive meetings**.
+  *Message: "Member Name: Missed last 3 meetings"*
